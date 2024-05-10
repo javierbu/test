@@ -198,7 +198,7 @@ else
 	fi
 fi	
 echo " ${VIOLETA} $i${NORMAL} (${phy}) ${VIOLETA}|${NORMAL} 2,4GHz: $b24 ${VIOLETA}|${NORMAL} 5GHz: $b5 ${VIOLETA}|${NORMAL} Acepta modo monitor: $monitor ${VIOLETA}|${NORMAL} Acepta modo AP: $AP ${VIOLETA}|${NORMAL} driver:${VERDE}${driver}${NORMAL}"
-echo "      Modo actual de${VIOLETA} $i$ ${AMARILLO}$estado${NORMAL} ${VIOLETA}|${NORMAL} canal ${AMARILLO}$canal${NORMAL}" 
+echo "      Modo actual de${VIOLETA} $i ${AMARILLO}$estado${NORMAL} ${VIOLETA}|${NORMAL} canal ${AMARILLO}$canal${NORMAL}" 
 unset driver phy 24 5 monitor AP
 ((cuenta++))
 done
