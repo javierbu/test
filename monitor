@@ -1,0 +1,253 @@
+#!/bin/bash
+CYAN=`echo -e "\033[01;36m"`
+VERDE=`echo -e "\e[32m"`
+BLANCO=`echo -e "\e[0m"`
+AZUL=`echo -e "\e[34m"`
+ROJO=`echo -e "\e[31m"`
+NORMAL=`echo -e "\033[1;37m"`
+ULTRAVERDE=`echo -e "\e[1;32m"`
+AMARILLO=`echo -e "\e[1;33m"`
+VIOLETA=`echo -e "\e[1;35m"`
+#################
+pwd=/tmp/
+function matar_procesos () {
+procesos="wpa_action\|wpa_supplicant\|wpa_cli\|dhclient\|ifplugd\|dhcdbd\|dhcpcd\|udhcpc\|NetworkManager\|knetworkmanager\|avahi-autoipd\|avahi-daemon\|wlassistant\|wifibox\|net_applet\|wicd-daemon\|wicd-client\|iwd"
+for i in $procesos ; do
+echo;echo " Procesos que pueden resultar molestos:";echo
+ps -A  -o comm=Name | grep $procesos
+echo;echo -n  " Quieres acabar con ellos? S/n:"
+read respuesta
+respuesta=$(echo "$respuesta" | tr '[:upper:]' '[:lower:]')
+if [ "$respuesta" = "n" ]; then
+	echo;echo " Ok, no se acabara con los procesos."
+	echo;exit
+elif [ "$respuesta" = "" ] || [ "$respuesta" = "s" ]; then
+	echo;echo " Acabando con los procesos...."
+	kill -9 $(ps fax | grep $i | awk '{print $1}') >&/dev/null
+fi
+echo;echo " Todo listo, hasta la proxima! By_Tux0"
+done
+exit
+}
+function monitor () {
+if [ $1 = quitar ];then
+        ip link set dev $iface down
+	if [ -n "$nombre" ] && [ "$nombre" = "$iface" ]; then
+        	iw dev $nombre set type managed
+        	ip link set dev $nombre up
+	elif [ -n "$nombre" ] && [ "$nombre" != "$iface" ]; then
+       		ip link set dev $iface name $nombre
+                iw dev $nombre set type managed
+                ip link set dev $nombre up
+	elif [ -z "$nombre" ];then
+		iw dev $iface set type managed
+                ip link set dev $iface up
+	fi
+	if [ -n "$canal" ]; then
+                if [ -n "$nombre" ];then
+                        iw dev "$nombre" set channel "$canal"
+                else
+                        iw dev "$iface" set channel "$canal"
+                fi
+        fi
+elif [ $1  = poner ];then
+        ip link set dev $iface down
+	if [ -n "$nombre" ] && [ "$nombre" = "$iface" ]; then
+		iw dev $nombre set type monitor
+		ip link set dev $nombre up
+	elif [ -n "$nombre" ] && [ "$nombre" != "$iface" ]; then
+		ip link set dev $iface name $nombre
+		iw dev $nombre set type monitor
+		ip link set dev $nombre up
+	elif [ -z "$nombre" ];then
+                iw dev $iface set type monitor
+                ip link set dev $iface up
+	fi
+	if [ -n "$canal" ]; then
+		if [ -n "$nombre" ];then
+			iw dev "$nombre" set channel "$canal"
+		else
+			iw dev "$iface" set channel "$canal"
+		fi
+	fi
+fi
+}
+function sinargumentos () {
+ayuda
+exit
+}
+function comprobarargumento1 () {
+grep -q -w "$iface" ${pwd}lista_interfaces
+if [ $? != 0 ]; then
+	echo "${ROJO} $iface no es una interface valida${NORMAL}"
+	ayuda
+	echo "${ROJO} OPERACION NO REALIZADA!!!"
+	exit
+fi
+}
+function comprobarargumento2 () {
+if [[ "$accion" != "start" && "$accion" != "stop" ]]; then
+	echo "${ROJO} $accion no es una accion valida${NORMAL}"
+	ayuda
+	echo "${ROJO} OPERACION NO REALIZADA!!!"
+	exit
+else
+	if [[ "$accion" == "start" ]];then
+	monitor poner
+	else
+	monitor quitar
+	fi
+fi
+echo;echo "${VERDE}	HECHO!!" ;echo
+eleccion_dispositivo
+exit 0
+}
+function comprobarargumento3 () { 
+phy=$(cat /sys/class/net/${iface}/phy80211/name)
+iw phy $phy info | grep -q -w "\[$canal\]"  &>/dev/null
+if [ "$?" != "0" ];then
+	echo "${ROJO} El canal $canal no es soportado por $iface o no es un canal valido${NORMAL}"
+	ayuda
+	echo "${ROJO} OPERACION NO REALIZADA!!!${NORMAL}"
+	exit
+fi 
+}
+function ayuda () {
+echo
+echo "  monitor -l  Para ver interfaces disponibles"
+echo "  monitor -h  Para ver la ayuda"
+echo "  monitor -m  Para matar procesos incomodos (airmon-ng check kill)"
+echo;echo " Modo de uso:    monitor <interface> <accion> [opciones]";echo
+echo " interface (obligatoria):  <interface>"
+echo " accion (obligatorio):	start = poner modo monitor"
+echo "			stop = quitar modo monitor"
+echo " Opciones (opcional):	-c | --canal = fijar canal"
+echo " 			-n | --nombre = nuevo nombre de la interface"
+echo " Ejemplos:"
+echo "${VERDE}	monitor wlan0 start${NORMAL}"
+echo "${VERDE}	monitor wlan0mon stop -n wlan0"
+echo "${VERDE}	monitor wlan0 start -c 4 -n wlan0mon${NORMAL}"
+eleccion_dispositivo 
+}
+function iniciar () {
+if [ -n $iface ]; then
+	if [ -z $accion ];then
+		echo " Faltan argumentos"
+		ayuda
+		exit
+	fi
+	comprobarargumento1
+else
+ayuda
+fi
+
+
+if [ -n "$accion" ]; then
+	comprobarargumento2
+
+fi
+if [ -n "$canal" ]; then
+	comprobarargumento3
+fi
+eleccion_dispositivo
+}
+function eleccion_dispositivo () {
+echo;echo " Lista de interfaces disponibles: "
+rm ${pwd}lista_interfaces 2>/dev/null
+iw dev | grep -oP 'Interface \K\S+' >${pwd}lista_interfaces 
+cuenta=1
+for i in `cat ${pwd}lista_interfaces`; do
+rm ${pwd}$i 2>/dev/null
+touch ${pwd}$i 
+driver=$(ethtool -i $i | grep driver | cut -d ':' -f2)
+phy=$(cat /sys/class/net/${i}/phy80211/name)
+estado=$(iw dev $i info | grep type | cut -d " " -f 2) &>/dev/null
+if [ "$estado" = "monitor" ]; then
+	estado=$(echo "${ROJO}monitor${NORMAL}")
+fi
+iw phy $phy info | awk '/^[[:blank:]]*\* monitor/' &>/dev/null
+if [ $? -eq 0 ];then
+        monitor=$(echo -e ${VERDE}"\u2713"${NORMAL})
+else
+        monitor=$(echo -e ${ROJO}"\u2717"${NORMAL})
+fi
+iw phy $phy info | awk '/^[[:blank:]]*\* AP$/' | grep AP &>/dev/null
+if [ $? -eq 0 ];then
+        AP=$(echo -e ${VERDE}"\u2713"${NORMAL})${NORMAL}
+else
+        AP=$(echo -e ${ROJO}"\u2717"${NORMAL})
+fi
+iw phy $phy info | grep -A 4 Frequencies | grep '\[1\]' &>/dev/null
+if [ $? -eq 0 ];then
+        b24=$(echo -e ${VERDE}"\u2713"${NORMAL})${NORMAL}
+else
+        b24=$(echo -e ${ROJO}"\u2717"${NORMAL})
+fi
+iw phy $phy info | grep -A 4 Frequencies | grep '\[36\]' &>/dev/null
+if [ $? -eq 0 ];then
+        b5=$(echo -e ${VERDE}"\u2713"${NORMAL})${NORMAL}
+else
+        b5=$(echo -e ${ROJO}"\u2717"${NORMAL})
+fi
+if ! command -v iwlist &> /dev/null; then
+    canal="No soportado"
+else 
+	canal=$(iwlist "$i" channel | grep "Curren" |  sed 's/.*Channel \([0-9]\+\).*/\1/');echo
+	if [ -z "$canal" ] ;then
+		canal="No hay canal fijado"
+	fi
+fi	
+echo " ${VIOLETA} $i${NORMAL} (${phy}) ${VIOLETA}|${NORMAL} 2,4GHz: $b24 ${VIOLETA}|${NORMAL} 5GHz: $b5 ${VIOLETA}|${NORMAL} Acepta modo monitor: $monitor ${VIOLETA}|${NORMAL} Acepta modo AP: $AP ${VIOLETA}|${NORMAL} driver:${VERDE}${driver}${NORMAL}"
+echo "      Modo actual de${VIOLETA} $i$ ${AMARILLO}$estado${NORMAL} ${VIOLETA}|${NORMAL} canal ${AMARILLO}$canal${NORMAL}" 
+unset driver phy 24 5 monitor AP
+((cuenta++))
+done
+echo
+}
+if [ "$EUID" -ne 0 ]; then
+    echo " No tienes suficientes permisos com para ejecutar el script Prueba desde root o con sudo."
+    exit 1
+fi
+
+if [ -z $1 ];then
+	sinargumentos
+fi
+iw dev | grep -oP 'Interface \K\S+' >${pwd}lista_interfaces 
+iface="$1"
+accion="$2"
+shift 2
+if [ "$iface" = "-h" ]; then
+	ayuda
+	exit 0
+elif [ "$iface" = "-l" ];then
+	eleccion_dispositivo
+	exit 0
+elif [ "$iface" = "-m" ];then
+	matar_procesos
+	exit 0
+fi
+
+while [[ $# -gt 0 ]]; do
+    key="$1"
+
+    case $key in
+        -c | --canal)
+            canal="$2"
+	    comprobarargumento3
+            shift
+            ;;
+        -n | --nombre)
+            nombre="$2"
+            shift
+            ;;
+
+        *)
+            echo;echo "${ROJO}Opción no reconocida: $1${NORMAL}"
+            ayuda
+	    echo "${ROJO} OPERACION NO REALIZADA!!!!!${NORMAL}"
+            exit 1
+            ;;
+    esac
+    shift
+done
+iniciar
