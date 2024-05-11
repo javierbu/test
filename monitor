@@ -98,7 +98,7 @@ else
 	monitor quitar
 	fi
 fi
-echo;echo "${VERDE}	HECHO!!" ;echo
+echo;echo "${VERDE}	HECHO!!${NORMAL}" ;echo
 eleccion_dispositivo
 exit 0
 }
