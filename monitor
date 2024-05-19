@@ -124,7 +124,7 @@ echo "			stop = quitar modo monitor"
 echo " Opciones (opcional):	-c | --canal = fijar canal"
 echo " 			-n | --nombre = nuevo nombre de la interface"
 echo " Ejemplos:"
-echo "${VERDE}	monitor wlan0 start${NORMAL}"
+echo "${NORMAL}${VERDE}	monitor wlan0 start${NORMAL}"
 echo "${VERDE}	monitor wlan0mon stop -n wlan0"
 echo "${VERDE}	monitor wlan0 start -c 4 -n wlan0mon${NORMAL}"
 eleccion_dispositivo 
