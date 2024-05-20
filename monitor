@@ -124,7 +124,7 @@ echo "			stop = quitar modo monitor"
 echo " Opciones (opcional):	-c | --canal = fijar canal"
 echo " 			-n | --nombre = nuevo nombre de la interface"
 echo " Ejemplos:"
-echo "${VERDE}	monitor wlan0 start${NORMAL}"
+echo "${NORMAL}${VERDE}	monitor wlan0 start${NORMAL}"
 echo "${VERDE}	monitor wlan0mon stop -n wlan0"
 echo "${VERDE}	monitor wlan0 start -c 4 -n wlan0mon${NORMAL}"
 eleccion_dispositivo 
@@ -155,7 +155,6 @@ function eleccion_dispositivo () {
 echo;echo " Lista de interfaces disponibles: "
 rm ${pwd}lista_interfaces 2>/dev/null
 iw dev | grep -oP 'Interface \K\S+' >${pwd}lista_interfaces 
-cuenta=1
 for i in `cat ${pwd}lista_interfaces`; do
 rm ${pwd}$i 2>/dev/null
 touch ${pwd}$i 
@@ -200,7 +199,6 @@ fi
 echo " ${VIOLETA} $i${NORMAL} (${phy}) ${VIOLETA}|${NORMAL} 2,4GHz: $b24 ${VIOLETA}|${NORMAL} 5GHz: $b5 ${VIOLETA}|${NORMAL} Acepta modo monitor: $monitor ${VIOLETA}|${NORMAL} Acepta modo AP: $AP ${VIOLETA}|${NORMAL} driver:${VERDE}${driver}${NORMAL}"
 echo "      Modo actual de${VIOLETA} $i ${AMARILLO}$estado${NORMAL} ${VIOLETA}|${NORMAL} canal ${AMARILLO}$canal${NORMAL}" 
 unset driver phy 24 5 monitor AP
-((cuenta++))
 done
 echo
 }
